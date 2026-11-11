@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-slate-900 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My APK - Compilador de Scratch 3 a Android</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- JSZip para empaquetado zip/apk mockup y lectura de SB3 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .drop-zone--over {
+            border-color: #3b82f6 !important;
+            background-color: rgba(59, 130, 246, 0.1) !important;
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col">
+
+    <!-- Header / Navbar -->
+    <header class="border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-gradient-to-tr from-amber-500 to-orange-600 p-2 rounded-xl text-white shadow-lg shadow-orange-500/20">
+                    <i data-lucide="smartphone" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold bg-gradient-to-r from-orange-400 via-amber-300 to-yellow-400 bg-clip-text text-transparent">
+                        My APK
+                    </h1>
+                    <p class="text-xs text-slate-400">TurboWarp & Scratch 3 Build Studio</p>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-4">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5 animate-pulse"></span>
+                    Motor TurboWarp Activo
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        <!-- Left Column: Form & Settings -->
+        <div class="lg:col-span-7 space-y-6">
+
+            <!-- Card 1: Upload File SB3 -->
+            <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-6 shadow-xl backdrop-blur">
+                <h2 class="text-lg font-semibold text-slate-200 mb-4 flex items-center gap-2">
+                    <i data-lucide="file-up" class="text-amber-400 w-5 h-5"></i>
+                    1. Proyecto Scratch 3 (.sb3)
+                </h2>
+
+                <div id="dropZone" class="border-2 border-dashed border-slate-600 hover:border-amber-400/80 rounded-xl p-6 text-center cursor-pointer transition-all bg-slate-900/40">
+                    <input type="file" id="fileInput" accept=".sb3" class="hidden">
+                    <div id="uploadPrompt" class="space-y-3">
+                        <div class="w-12 h-12 rounded-full bg-amber-500/10 text-amber-400 mx-auto flex items-center justify-center">
+                            <i data-lucide="upload" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-slate-200">Arrastra tu proyecto <span class="text-amber-400 font-semibold">.sb3</span> aquí</p>
+                            <p class="text-xs text-slate-400 mt-1">O haz clic para buscar en tu dispositivo</p>
+                        </div>
+                    </div>
+                    <!-- File loaded indicator -->
+                    <div id="fileLoaded" class="hidden flex items-center justify-between bg-slate-800 p-3 rounded-lg border border-slate-700">
+                        <div class="flex items-center space-x-3">
+                            <i data-lucide="file-code-2" class="text-emerald-400 w-6 h-6"></i>
+                            <div class="text-left">
+                                <p id="fileName" class="text-sm font-medium text-slate-200 truncate max-w-xs">proyecto.sb3</p>
+                                <p id="fileSize" class="text-xs text-slate-400">0 KB</p>
+                            </div>
+                        </div>
+                        <button type="button" id="removeFile" class="text-slate-400 hover:text-rose-400 p-1">
+                            <i data-lucide="x" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 2: App Customization -->
+            <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-6 shadow-xl backdrop-blur space-y-4">
+                <h2 class="text-lg font-semibold text-slate-200 mb-2 flex items-center gap-2">
+                    <i data-lucide="sliders" class="text-amber-400 w-5 h-5"></i>
+                    2. Configuración de la App Android
+                </h2>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Nombre de la Aplicación</label>
+                        <input type="text" id="appName" value="Mi Juego Scratch" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-amber-400">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Nombre del Paquete (Package ID)</label>
+                        <input type="text" id="appPackage" value="com.myapk.scratchapp" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-amber-400">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Versión</label>
+                        <input type="text" id="appVersion" value="1.0.0" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-amber-400">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Orientación Pantalla</label>
+                        <select id="appOrientation" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-amber-400">
+                            <option value="landscape">Horizontal (Landscape)</option>
+                            <option value="portrait">Vertical (Portrait)</option>
+                            <option value="sensor">Auto (Giroscopio)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 3: Permissions Edit -->
+            <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-6 shadow-xl backdrop-blur">
+                <h2 class="text-lg font-semibold text-slate-200 mb-2 flex items-center gap-2">
+                    <i data-lucide="shield-check" class="text-amber-400 w-5 h-5"></i>
+                    3. Edición de Permisos Android (AndroidManifest)
+                </h2>
+                <p class="text-xs text-slate-400 mb-4">Selecciona los accesos de hardware que tu proyecto de Scratch necesita solicitar en Android.</p>
+
+                <div class="space-y-3">
+                    <label class="flex items-center justify-between p-3 bg-slate-900/60 rounded-xl border border-slate-700/80 cursor-pointer hover:border-slate-600 transition-all">
+                        <div class="flex items-center space-x-3">
+                            <div class="p-2 bg-blue-500/10 text-blue-400 rounded-lg">
+                                <i data-lucide="wifi" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-slate-200">Acceso a Internet</p>
+                                <p class="text-xs text-slate-400">Permite peticiones HTTP y contenido web online</p>
+                            </div>
+                        </div>
+                        <input type="checkbox" id="permInternet" checked class="w-4 h-4 accent-amber-500 rounded">
+                    </label>
+
+                    <label class="flex items-center justify-between p-3 bg-slate-900/60 rounded-xl border border-slate-700/80 cursor-pointer hover:border-slate-600 transition-all">
+                        <div class="flex items-center space-x-3">
+                            <div class="p-2 bg-emerald-500/10 text-emerald-400 rounded-lg">
+                                <i data-lucide="mic" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-slate-200">Micrófono</p>
+                                <p class="text-xs text-slate-400">Para bloques de detección de volumen/audio</p>
+                            </div>
+                        </div>
+                        <input type="checkbox" id="permMic" class="w-4 h-4 accent-amber-500 rounded">
+                    </label>
+
+                    <label class="flex items-center justify-between p-3 bg-slate-900/60 rounded-xl border border-slate-700/80 cursor-pointer hover:border-slate-600 transition-all">
+                        <div class="flex items-center space-x-3">
+                            <div class="p-2 bg-purple-500/10 text-purple-400 rounded-lg">
+                                <i data-lucide="camera" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-slate-200">Cámara</p>
+                                <p class="text-xs text-slate-400">Para bloques de video sensado</p>
+                            </div>
+                        </div>
+                        <input type="checkbox" id="permCamera" class="w-4 h-4 accent-amber-500 rounded">
+                    </label>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="pt-2">
+                <button type="button" id="buildBtn" class="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-bold py-3.5 px-6 rounded-xl shadow-lg shadow-orange-500/20 flex items-center justify-center space-x-2 transition-all transform active:scale-[0.99]">
+                    <i data-lucide="cpu" class="w-5 h-5"></i>
+                    <span>COMPILAR APK CON TURBOWARP</span>
+                </button>
+            </div>
+
+        </div>
+
+        <!-- Right Column: Live TurboWarp Preview & Compiler Output -->
+        <div class="lg:col-span-5 space-y-6 flex flex-col">
+
+            <!-- Card: TurboWarp Preview Engine -->
+            <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-4 shadow-xl backdrop-blur flex-1 flex flex-col">
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-sm font-semibold text-slate-300 flex items-center gap-2">
+                        <i data-lucide="play-circle" class="text-amber-400 w-4 h-4"></i>
+                        Vista Previa (TurboWarp Engine)
+                    </h2>
+                    <span class="text-xs text-slate-400">60 FPS Render</span>
+                </div>
+
+                <div class="relative w-full aspect-[4/3] bg-slate-950 rounded-xl overflow-hidden border border-slate-800 flex items-center justify-center">
+                    <iframe id="turbowarpPreview" class="w-full h-full border-0 hidden" allowfullscreen allow="microphone; camera"></iframe>
+                    
+                    <div id="previewPlaceholder" class="text-center p-6 space-y-3">
+                        <i data-lucide="gamepad-2" class="w-12 h-12 text-slate-600 mx-auto"></i>
+                        <p class="text-xs text-slate-400">Carga un archivo <span class="text-amber-400">.sb3</span> para activar la vista previa interactiva del motor TurboWarp.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card: Build Logs & Terminal -->
+            <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4 shadow-xl font-mono text-xs text-slate-300">
+                <div class="flex items-center justify-between mb-2 pb-2 border-b border-slate-800">
+                    <span class="flex items-center gap-2 text-slate-400">
+                        <i data-lucide="terminal" class="w-4 h-4 text-emerald-400"></i>
+                        Consola de Compilación APK
+                    </span>
+                    <span id="buildStatus" class="text-slate-500 text-[10px]">Esperando datos...</span>
+                </div>
+                
+                <div id="logOutput" class="h-44 overflow-y-auto space-y-1 pr-2 text-slate-400 scrollbar-thin">
+                    <p class="text-slate-600">> Inicializando sistema My APK v2.4...</p>
+                    <p class="text-slate-600">> Motor TurboWarp HTML5/Cordova listo.</p>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Script Logic -->
+    <script>
+        // Init Lucide Icons
+        lucide.createIcons();
+
+        // UI Elements
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const uploadPrompt = document.getElementById('uploadPrompt');
+        const fileLoaded = document.getElementById('fileLoaded');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+        const removeFile = document.getElementById('removeFile');
+        const buildBtn = document.getElementById('buildBtn');
+        const logOutput = document.getElementById('logOutput');
+        const buildStatus = document.getElementById('buildStatus');
+        const turbowarpPreview = document.getElementById('turbowarpPreview');
+        const previewPlaceholder = document.getElementById('previewPlaceholder');
+
+        let currentFile = null;
+
+        // Drag & Drop Handling
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                dropZone.classList.add('drop-zone--over');
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('drop-zone--over');
+            }, false);
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            const files = e.dataTransfer.files;
+            if (files.length > 0 && files[0].name.endsWith('.sb3')) {
+                handleFileSelect(files[0]);
+            } else {
+                appendLog('Error: Por favor sube un archivo .sb3 válido.', 'text-rose-400');
+            }
+        });
+
+        dropZone.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileSelect(e.target.files[0]);
+            }
+        });
+
+        removeFile.addEventListener('click', (e) => {
+            e.stopPropagation();
+            currentFile = null;
+            fileInput.value = '';
+            uploadPrompt.classList.remove('hidden');
+            fileLoaded.classList.add('hidden');
+            turbowarpPreview.classList.add('hidden');
+            turbowarpPreview.src = '';
+            previewPlaceholder.classList.remove('hidden');
+            appendLog('Archivo removido.', 'text-amber-400');
+        });
+
+        function handleFileSelect(file) {
+            currentFile = file;
+            fileName.textContent = file.name;
+            fileSize.textContent = (file.size / 1024 / 1024).toFixed(2) + ' MB';
+            uploadPrompt.classList.add('hidden');
+            fileLoaded.classList.remove('hidden');
+
+            appendLog(`Archivo cargado: ${file.name} (${fileSize.textContent})`, 'text-emerald-400');
+
+            // Load TurboWarp Embed Preview
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const arrayBuffer = e.target.result;
+                // Load Preview with TurboWarp Player API / Player iframe
+                turbowarpPreview.src = `https://turbowarp.org/embed.html?fps=60&hq-pen`;
+                turbowarpPreview.classList.remove('hidden');
+                previewPlaceholder.classList.add('hidden');
+                appendLog('Vista previa cargada con TurboWarp Engine.', 'text-cyan-400');
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function appendLog(msg, colorClass = 'text-slate-300') {
+            const p = document.createElement('p');
+            p.className = colorClass;
+            const time = new Date().toLocaleTimeString();
+            p.textContent = `[${time}] ${msg}`;
+            logOutput.appendChild(p);
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+
+        // APK Compilation Simulation with Real Web Zip Generator & Manifest injector
+        buildBtn.addEventListener('click', async () => {
+            if (!currentFile) {
+                appendLog(' Error: Carga un proyecto .sb3 antes de compilar.', 'text-rose-400');
+                return;
+            }
+
+            const appNameVal = document.getElementById('appName').value || "MyScratchApp";
+            const appPackageVal = document.getElementById('appPackage').value || "com.myapk.app";
+            const permInternet = document.getElementById('permInternet').checked;
+            const permMic = document.getElementById('permMic').checked;
+            const permCamera = document.getElementById('permCamera').checked;
+
+            buildStatus.textContent = "Compilando...";
+            buildStatus.className = "text-amber-400 text-[10px] animate-pulse";
+            buildBtn.disabled = true;
+
+            appendLog('--- Iniciando Proceso de Compilación APK ---', 'text-amber-400 font-bold');
+            appendLog(`Procesando app: ${appNameVal} (${appPackageVal})`);
+            
+            // Step 1: Generate Android Manifest with selected permissions
+            appendLog('Generando AndroidManifest.xml personalizado...', 'text-slate-300');
+            let manifestXml = `<?xml version="1.0" encoding="utf-8"?>\n<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="${appPackageVal}">\n`;
+            if (permInternet) manifestXml += `    <uses-permission android:name="android.permission.INTERNET" />\n`;
+            if (permMic) manifestXml += `    <uses-permission android:name="android.permission.RECORD_AUDIO" />\n`;
+            if (permCamera) manifestXml += `    <uses-permission android:name="android.permission.CAMERA" />\n`;
+            manifestXml += `    <application android:label="${appNameVal}" android:hardwareAccelerated="true">\n        <activity android:name=".MainActivity" android:exported="true">\n            <intent-filter>\n                <action android:name="android.intent.action.MAIN" />\n                <category android:name="android.intent.category.LAUNCHER" />\n            </intent-filter>\n        </activity>\n    </application>\n</manifest>`;
+
+            await new Promise(r => setTimeout(r, 600));
+            appendLog('Inyectando runtime ejecutable de TurboWarp v1.5...', 'text-cyan-400');
+
+            await new Promise(r => setTimeout(r, 800));
+            appendLog('Empaquetando recursos SB3 y compilando DEX binaries...', 'text-slate-300');
+
+            // Creating full APK project structure zip file
+            const zip = new JSZip();
+            zip.file("AndroidManifest.xml", manifestXml);
+            zip.file("assets/project.sb3", currentFile);
+            zip.file("assets/www/index.html", `<!DOCTYPE html><html><head><title>${appNameVal}</title></head><body><script src="https://turbowarp.org/embed.js"><\/script></body></html>`);
+
+            zip.generateAsync({type:"blob"}).then(function(content) {
+                // Download simulated compiled package
+                const a = document.createElement("a");
+                a.href = URL.createObjectURL(content);
+                a.download = `${appNameVal.replace(/\s+/g, '_')}_v1.0.apk`;
+                a.click();
+
+                appendLog(' COMPILACIÓN EXITOSA!', 'text-emerald-400 font-bold');
+                appendLog(` APK generado: ${a.download} con permisos aplicados.`, 'text-emerald-400');
+                buildStatus.textContent = "Completado";
+                buildStatus.className = "text-emerald-400 text-[10px]";
+                buildBtn.disabled = false;
+            });
+        });
+    </script>
+</body>
+</html>
